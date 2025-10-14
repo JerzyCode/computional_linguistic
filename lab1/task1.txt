@@ -1,0 +1,31 @@
+1) Zaimplementować LSTM
+2) Zaimplementować Transformer'a
+
+3) Porównać obie architektury
+
+4) BONUS: (*) wytenować baby dragon hatchling 1 października 
+
+
+Porównywanie prawdopodobieńśtw - metryka perlexity, czas treningu, czas inferencji?
+
+tyle samo trenować 1 i drugi i perplexity
+
+generujemy tekst i patrzymy ile tokenów na sekunde
+
+2 tygodnie - czyli do 27 października
+
+pytanie z kodu będzie
+
+tokenizer można użyć
+
+Geneorwane token to lecimy i bierzemy token o największym prawdopoodobieństwie, a potem dokładamy do "kontekstu" lub można inaczej
+
+https://github.com/apohllo/computational-linguistics/blob/main/1-language-modeling.md
+
+trening w 16bitów
+
+
+kartkówk z attention is all you need.
+
+
+RunPod lub TogetherAi ...
