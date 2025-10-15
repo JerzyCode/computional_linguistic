@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "jupyter>=1.1.1",
+    "matplotlib>=3.10.7",
     "speakleash>=0.3.51",
     "torch>=2.8.0",
     "transformers>=4.57.0",
