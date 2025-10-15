@@ -1,11 +1,12 @@
 from datetime import datetime
 
 import torch
-from lstm import Lstm
-from lstm.utils import EpochTracker, ModelSaver
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
 from torch.utils.data import DataLoader
+
+from lstm.lstm_model import Lstm
+from lstm.utils import EpochTracker, ModelSaver
 
 
 def perform_batch(
@@ -124,4 +125,6 @@ def train(
         if model_saver is not None:
             model_saver.save_model_checkpoint(model, epoch)
 
+    if model_saver is not None:
+        model_saver.save_model_checkpoint(model, epoch)
     print(f"Training is done with {epoch} epochs, real end_time: {datetime.now()}")

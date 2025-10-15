@@ -1,10 +1,10 @@
 import csv
 import os
 import time
-from datetime import datetime
 
 import torch
-from lstm import Lstm
+
+from lstm.lstm_model import Lstm
 
 
 class ModelSaver:
@@ -16,7 +16,7 @@ class ModelSaver:
     def save_model_checkpoint(self, model: Lstm, epoch: int):
         if epoch % self.save_frequency:
             model_path = os.path.join(
-                self.save_dir, f"checkpoint_epoch_{epoch:04d}_{datetime.now()}.pt"
+                self.save_dir, f"lstm_checkpoint_epoch_{epoch:04d}.pt"
             )
             torch.save(model.state_dict(), model_path)
             print(f"Model saved at: {model_path}")
@@ -26,6 +26,10 @@ class EpochTracker:
     def __init__(self, save_csv_path: str):
         self.save_csv_path = save_csv_path
         self.start_time = None
+
+        dir_path = os.path.dirname(save_csv_path)
+        if dir_path and not os.path.exists(dir_path):
+            os.makedirs(dir_path, exist_ok=True)
 
         if not os.path.exists(save_csv_path):
             with open(save_csv_path, mode="w", newline="") as f:

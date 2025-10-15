@@ -7,8 +7,6 @@ from torch.utils.data import DataLoader, Dataset, Subset
 
 class LanguageModelingDataset(Dataset):
     def __init__(self, inputs, labels):
-        print(f"Inputs type: {type(inputs)}, len={len(inputs)}")
-        print(f"Labels type: {type(labels)}, len={len(labels)}")
         self.inputs = inputs
         self.labels = labels
 

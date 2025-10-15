@@ -4,23 +4,25 @@ import torch
 from transformers import AutoTokenizer
 
 from lstm.data import load_data, load_data_subset
-from lstm.lstm import Lstm
+from lstm.lstm_model import Lstm
 from lstm.training import train
 from lstm.utils import EpochTracker, ModelSaver
 
-TRAINING_DATA_PATH = "datasets/training_data_small.pt"
-EVAL_DATA_PATH = "datasets/eval_data_small.pt"
+TRAINING_DATA_PATH = "lab1/datasets/training_data_small.pt"
+EVAL_DATA_PATH = "lab1/datasets/eval_data_small.pt"
 METRICS_CSV_PATH = "metrics/metrics.csv"
 SAVE_MODEL_DIR = "models/"
 BATCH_SIZE = 32
 EVAL_SUBSET = 3
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+# device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cpu"
+
 
 tokenizer = AutoTokenizer.from_pretrained("dkleczek/bert-base-polish-uncased-v1")
 model_saver = ModelSaver(SAVE_MODEL_DIR, save_frequency=5)
 epoch_tracker = EpochTracker(METRICS_CSV_PATH)
-lstm_model = Lstm(tokenizer, seq_len=128)
+lstm_model = Lstm(device=device, tokenizer=tokenizer, seq_len=128, dtype=torch.float16)
 
 end_training_date = datetime.now() + timedelta(minutes=5)
 
