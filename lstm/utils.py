@@ -14,7 +14,7 @@ class ModelSaver:
         os.makedirs(save_dir, exist_ok=True)
 
     def save_model_checkpoint(self, model: Lstm, epoch: int):
-        if epoch % self.save_frequency:
+        if epoch % self.save_frequency == 0:
             model_path = os.path.join(
                 self.save_dir, f"lstm_checkpoint_epoch_{epoch:04d}.pt"
             )

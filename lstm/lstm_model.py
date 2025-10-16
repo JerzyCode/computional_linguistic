@@ -14,6 +14,8 @@ class Lstm(nn.Module):
         seq_len: int = 127,
     ):
         super().__init__()
+        self.dtype = dtype
+        self.device = device
         self.tokenizer = tokenizer
         self.vocab_size = tokenizer.vocab_size
         self.E = nn.Embedding(tokenizer.vocab_size, emb_dim, dtype=dtype).to(device)
@@ -45,13 +47,25 @@ class Lstm(nn.Module):
 
         self.seq_len = seq_len
 
+        self.gain = 0.1
+
         self._init_weights()
 
     def _init_weights(self):
-        for w in [self.W_f, self.W_i, self.W_c, self.W_o, self.W_vocab]:
-            nn.init.xavier_uniform_(w)
+        for name, W in zip(
+            ["W_f", "W_i", "W_c", "W_o"], [self.W_f, self.W_i, self.W_c, self.W_o]
+        ):
+            input_dim = self.E.embedding_dim
+            nn.init.xavier_uniform_(W[:, :input_dim], gain=self.gain)
+            nn.init.xavier_uniform_(W[:, input_dim:], gain=self.gain)
 
-        nn.init.constant_(self.b_f, 0.5)
+            print(
+                f"{name} norm (Frobenius): {W.norm().item():.6f}, min: {W.min().item():.6f}, max: {W.max().item():.6f}"
+            )
+
+        nn.init.xavier_uniform_(self.W_vocab, gain=self.gain)
+
+        nn.init.ones_(self.b_f)
         nn.init.zeros_(self.b_i)
         nn.init.zeros_(self.b_c)
         nn.init.zeros_(self.b_o)

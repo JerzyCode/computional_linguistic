@@ -17,7 +17,12 @@ class LanguageModelingDataset(Dataset):
         return self.inputs[idx], self.labels[idx]
 
 
-def load_data(path: str, device: str, batch_size, shuffle: bool = False) -> DataLoader:
+def load_data(
+    path: str,
+    device: str,
+    batch_size,
+    shuffle: bool = False,
+) -> DataLoader:
     if not os.path.exists(path):
         raise FileNotFoundError(f"There is no file with path: {path}")
 
@@ -36,7 +41,10 @@ def load_data(path: str, device: str, batch_size, shuffle: bool = False) -> Data
 
 
 def load_data_subset(
-    path: str, device: str, batch_size: int, subset_size: int = 1000
+    path: str,
+    device: str,
+    batch_size: int,
+    subset_size: int = 1000,
 ) -> DataLoader:
     if not os.path.exists(path):
         raise FileNotFoundError(f"There is no file with path: {path}")
