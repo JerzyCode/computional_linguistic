@@ -4,5 +4,8 @@ data
 datasets
 speakleash
 
+raw_data
+prepared_data
+
 models
 __pycache__
