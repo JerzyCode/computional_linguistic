@@ -20,34 +20,36 @@ class Lstm(nn.Module):
         self.vocab_size = tokenizer.vocab_size
         self.E = nn.Embedding(tokenizer.vocab_size, emb_dim, dtype=dtype).to(device)
 
-        self.W_f = torch.empty(
-            hidden_size, emb_dim + hidden_size, device=device, dtype=dtype
+        self.W_f = nn.Parameter(
+            torch.empty(hidden_size, emb_dim + hidden_size, dtype=dtype, device=device)
         )
-        self.b_f = torch.zeros(hidden_size, 1, device=device, dtype=dtype)
+        self.b_f = nn.Parameter(torch.zeros(hidden_size, 1, dtype=dtype, device=device))
 
-        self.W_i = torch.empty(
-            hidden_size, emb_dim + hidden_size, device=device, dtype=dtype
+        self.W_i = nn.Parameter(
+            torch.empty(hidden_size, emb_dim + hidden_size, dtype=dtype, device=device)
         )
-        self.b_i = torch.zeros(hidden_size, 1, device=device, dtype=dtype)
+        self.b_i = nn.Parameter(torch.zeros(hidden_size, 1, dtype=dtype, device=device))
 
-        self.W_c = torch.empty(
-            hidden_size, emb_dim + hidden_size, device=device, dtype=dtype
+        self.W_c = nn.Parameter(
+            torch.empty(hidden_size, emb_dim + hidden_size, dtype=dtype, device=device)
         )
-        self.b_c = torch.zeros(hidden_size, 1, device=device, dtype=dtype)
+        self.b_c = nn.Parameter(torch.zeros(hidden_size, 1, dtype=dtype, device=device))
 
-        self.W_o = torch.empty(
-            hidden_size, emb_dim + hidden_size, device=device, dtype=dtype
+        self.W_o = nn.Parameter(
+            torch.empty(hidden_size, emb_dim + hidden_size, dtype=dtype, device=device)
         )
-        self.b_o = torch.zeros(hidden_size, 1, device=device, dtype=dtype)
+        self.b_o = nn.Parameter(torch.zeros(hidden_size, 1, dtype=dtype, device=device))
 
-        self.W_vocab = torch.empty(
-            tokenizer.vocab_size, hidden_size, device=device, dtype=dtype
+        self.W_vocab = nn.Parameter(
+            torch.empty(tokenizer.vocab_size, hidden_size, dtype=dtype, device=device)
         )
-        self.b_vocab = torch.zeros(tokenizer.vocab_size, device=device, dtype=dtype)
+        self.b_vocab = nn.Parameter(
+            torch.zeros(tokenizer.vocab_size, dtype=dtype, device=device)
+        )
 
         self.seq_len = seq_len
 
-        self.gain = 0.1
+        self.gain = 1.0
 
         self._init_weights()
 
@@ -70,6 +72,18 @@ class Lstm(nn.Module):
         nn.init.zeros_(self.b_c)
         nn.init.zeros_(self.b_o)
         nn.init.zeros_(self.b_vocab)
+
+    def count_lstm_parameters(self) -> int:
+        total = 0
+
+        for name, param in self.__dict__.items():
+            if isinstance(param, torch.Tensor):
+                total += param.numel()
+
+        for param in self.parameters():
+            total += param.numel()
+
+        return total
 
     # IN
     # input_ids -> (batch_size, )
