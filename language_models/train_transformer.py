@@ -84,7 +84,7 @@ if __name__ == "__main__":
         log_freq=1,
         save_freq=3,
         batch_log_interval=100,
-    ).to(device)
+    )
 
     generated_after_training = model.generate_text(
         tokenizer, max_new_tokens=max_new_tokens
