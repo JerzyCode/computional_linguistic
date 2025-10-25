@@ -12,3 +12,6 @@ __pycache__
 
 runs
 plots
+logs
+final_models
+lstm_old
