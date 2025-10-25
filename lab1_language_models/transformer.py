@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -103,7 +102,7 @@ class TransformerLanguageModel(nn.Module):
         num_heads: int = 8,
         blocks_count: int = 4,
         dropout: float = 0.2,
-        device: str = "cpu"
+        device: str = "cpu",
     ):
         super().__init__()
         self.token_embedding = nn.Embedding(vocab_size, embedding_dim)
@@ -118,7 +117,7 @@ class TransformerLanguageModel(nn.Module):
         self.lm_head = nn.Linear(embedding_dim, vocab_size)  # language_model_head
 
         self.seq_len = seq_len
-        self.device= device
+        self.device = device
 
     def forward(self, idx, targets=None):
         """
@@ -170,18 +169,20 @@ class TransformerLanguageModel(nn.Module):
             idx = torch.cat((idx, idx_next), dim=1)
 
         return idx
-    
-    def generate_text(
-            self, tokenizer, text: str = "", max_new_tokens: int = 15
-        ):
-            self.eval()
-            input_tokens = tokenizer.encode(text)
 
-            cls_token_tensor = torch.tensor([input_tokens], dtype=torch.long, device=self.device)
+    def generate_text(self, tokenizer, text: str = "", max_tokens: int = 128):
+        self.eval()
+        input_tokens = tokenizer.encode(text)
 
-            generated_tokens = self.generate(cls_token_tensor, max_new_tokens=max_new_tokens)
+        cls_token_tensor = torch.tensor(
+            [input_tokens], dtype=torch.long, device=self.device
+        )
 
-            generated_list = generated_tokens[0].tolist()
-            generated_text = tokenizer.decode(generated_list)
+        generated_tokens = self.generate(
+            cls_token_tensor, max_new_tokens=max_tokens - len(input_tokens)
+        )
 
-            return generated_text
+        generated_list = generated_tokens[0].tolist()
+        generated_text = tokenizer.decode(generated_list)
+
+        return generated_text

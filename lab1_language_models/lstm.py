@@ -118,7 +118,7 @@ class Lstm(nn.Module):
 
         return idx
 
-    def generate_text(self, tokenizer, text: str = "", max_new_tokens: int = 15):
+    def generate_text(self, tokenizer, text: str = "", max_tokens: int = 128):
         self.eval()
         input_tokens = tokenizer.encode(text)
 
@@ -127,7 +127,7 @@ class Lstm(nn.Module):
         )
 
         generated_tokens = self.generate(
-            cls_token_tensor, max_new_tokens=max_new_tokens
+            cls_token_tensor, max_new_tokens=max_tokens - len(input_tokens)
         )
 
         generated_list = generated_tokens[0].tolist()
