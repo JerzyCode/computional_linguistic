@@ -8,17 +8,16 @@ from matplotlib import pyplot as plt
 from torch import nn
 from torch.utils.data import DataLoader, Dataset, Subset
 from torch.utils.tensorboard import SummaryWriter
-from transformer import TransformerLanguageModel
 from transformers import AutoTokenizer
 
-writer = SummaryWriter(f"runs/transformer_training_{time.ctime(time.time())}")
+writer = SummaryWriter(f"runs/lstm_training_{time.ctime(time.time())}")
 
 tokenizer = AutoTokenizer.from_pretrained("dkleczek/bert-base-polish-uncased-v1")
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 PREPARED_DATASET_DIR = "./prepared_data"
 MAX_TRAIN_ELEMENTS = 196_00
-MAX_EVAL_ELEMENTS=1_96
+MAX_EVAL_ELEMENTS = 1_96
 log_file = f"logs/training_{timestamp}.log"
 
 os.makedirs(os.path.dirname(log_file), exist_ok=True)
@@ -28,8 +27,8 @@ small_val_path = os.path.join(PREPARED_DATASET_DIR, "small_val_data.pt")
 train_path = os.path.join(PREPARED_DATASET_DIR, "train_data.pt")
 val_path = os.path.join(PREPARED_DATASET_DIR, "val_data.pt")
 
-device = "cuda"
-dtype = torch.float16
+device = "cpu"
+dtype = torch.float32
 
 torch.manual_seed(1234)
 
@@ -50,6 +49,7 @@ file_handler.setFormatter(formatter)
 
 logger.addHandler(file_handler)
 
+
 class TokenDataset(Dataset):
     def __init__(self, data, seq_len):
         self.data = data
@@ -63,6 +63,7 @@ class TokenDataset(Dataset):
         x = self.data[i : i + self.seq_len]
         y = self.data[i + 1 : i + 1 + self.seq_len]
         return x, y
+
 
 def load_dataset(path: str, seq_len: int) -> TokenDataset:
     loaded_data = torch.load(path)
@@ -83,22 +84,6 @@ def create_data_loader(
     logger.info(f"DataLoader created: {num_batches} batches, batch_size={batch_size}")
 
     return data_loader
-
-
-def generate_text(
-    model: TransformerLanguageModel, text: str = "", max_new_tokens: int = 15
-):
-    model.eval()
-    input_tokens = tokenizer.encode(text)
-
-    cls_token_tensor = torch.tensor([input_tokens], dtype=torch.long, device=device)
-
-    generated_tokens = model.generate(cls_token_tensor, max_new_tokens=max_new_tokens)
-
-    generated_list = generated_tokens[0].tolist()
-    generated_text = tokenizer.decode(generated_list)
-
-    return generated_text
 
 
 def save_model(path: str, model: nn.Module):
@@ -150,15 +135,9 @@ def train(
 
     end_time = time.time() + 60 * training_minutes
     logger.info(f"Training will and at: {time.ctime(end_time)}")
-    
+
     eval_loss = eval(model, eval_data)
-    writer.add_scalars(
-                "Loss", 
-                {
-                    "Eval": eval_loss
-                },
-                epoch
-            )
+    writer.add_scalars("Loss", {"Eval": eval_loss}, epoch)
     logger.info(f"First eval: {eval_loss}")
 
     while time.time() < end_time:
@@ -183,7 +162,6 @@ def train(
             global_step += 1
             writer.add_scalar("Train/Loss_batch", loss.item(), global_step)
 
-
             if num_batches % batch_log_interval == 0:
                 avg_loss = loss_sum / num_batches
                 batch_time = time.time() - batch_start_time
@@ -191,21 +169,14 @@ def train(
                     f"[Batch {num_batches}] Avg loss: {avg_loss:.4f} | "
                     f"Time for last {batch_log_interval} batches: {batch_time:.2f}s"
                 )
-                batch_start_time = time.time() 
+                batch_start_time = time.time()
 
         epoch += 1
 
         epoch_loss = loss_sum / num_batches
         eval_loss = eval(model, eval_data)
-        
-        writer.add_scalars(
-            "Loss", 
-            {
-                "Train": epoch_loss,
-                "Eval": eval_loss
-            },
-            epoch
-        )
+
+        writer.add_scalars("Loss", {"Train": epoch_loss, "Eval": eval_loss}, epoch)
 
         old_lr = optimizer.param_groups[0]["lr"]
         scheduler.step(eval_loss)
@@ -223,14 +194,12 @@ def train(
 
         if epoch % save_freq == 0:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            path = os.path.join(model_save_dir, f"transformer_{epoch}_{timestamp}.pt")
+            path = os.path.join(model_save_dir, f"lstm_{epoch}_{timestamp}.pt")
             save_model(path, model)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path = os.path.join(model_save_dir, f"transformer_{epoch}_{timestamp}.pt")
+    path = os.path.join(model_save_dir, f"lstm_{epoch}_{timestamp}.pt")
     save_model(path, model)
-
-    # return train_losses, eval_losses
 
 
 def plot_losses(train_losses, eval_losses, save_path="plots/training.png"):

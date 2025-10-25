@@ -170,3 +170,18 @@ class TransformerLanguageModel(nn.Module):
             idx = torch.cat((idx, idx_next), dim=1)
 
         return idx
+    
+    def generate_text(
+            self, tokenizer, text: str = "", max_new_tokens: int = 15
+        ):
+            self.eval()
+            input_tokens = tokenizer.encode(text)
+
+            cls_token_tensor = torch.tensor([input_tokens], dtype=torch.long, device=self.device)
+
+            generated_tokens = self.generate(cls_token_tensor, max_new_tokens=max_new_tokens)
+
+            generated_list = generated_tokens[0].tolist()
+            generated_text = tokenizer.decode(generated_list)
+
+            return generated_text
