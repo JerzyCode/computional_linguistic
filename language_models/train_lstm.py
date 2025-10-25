@@ -1,13 +1,15 @@
 import torch
 from lstm import Lstm
 from training import (
+    MAX_EVAL_ELEMENTS,
+    MAX_TRAIN_ELEMENTS,
     create_data_loader,
     device,
     logger,
-    small_train_path,
-    small_val_path,
     tokenizer,
     train,
+    train_path,
+    val_path,
 )
 
 if __name__ == "__main__":
@@ -44,13 +46,16 @@ if __name__ == "__main__":
 
     logger.info("Start loading training data")
     training_data_loader = create_data_loader(
-        small_train_path, batch_size=batch_size, seq_len=seq_len
+        train_path,
+        batch_size=batch_size,
+        seq_len=seq_len,
+        max_elements=MAX_TRAIN_ELEMENTS,
     )
     logger.info("Finished training data")
 
     logger.info("Start loading eval data")
     eval_data_loader = create_data_loader(
-        small_val_path, batch_size=batch_size, seq_len=seq_len
+        val_path, batch_size=batch_size, seq_len=seq_len, max_elements=MAX_EVAL_ELEMENTS
     )
     logger.info("Finished eval data")
 
