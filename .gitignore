@@ -22,3 +22,6 @@ prepared_data
 raw_data
 dataset
 training_metrics
+
+hate_model_finetune
+hate_model_scratch
