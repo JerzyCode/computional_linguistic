@@ -67,7 +67,12 @@ def load_data(
     eval_dataset = TokenDataset(eval_tokens, seq_len)
 
     logger.info("Creating dataloaders")
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_dataloader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        generator=torch.Generator().manual_seed(42),
+    )
     eval_dataloader = DataLoader(eval_dataset, batch_size=batch_size)
 
     return train_dataloader, eval_dataloader
