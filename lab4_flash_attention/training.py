@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from dataclasses import dataclass
 
 import torch
 from torch.utils.data import DataLoader
@@ -9,14 +10,29 @@ from transformer import ModelType
 from typing_extensions import Optional, Tuple
 
 
+@dataclass(frozen=True)
 class TrainingParameters:
-    model_tyoe: ModelType
-    epochs: int
-    device: str
+    model_type: ModelType
+    device: torch.device
     dtype: torch.dtype
     logger: logging.Logger
+    epochs: int = 1
     lr: float = 1e-4
     eval_interval: int = 50
+    batch_size: int = 64
+
+    def __str__(self) -> str:
+        return (
+            f"TrainingParameters(\n"
+            f"  model_type={self.model_type.value},\n"
+            f"  epochs={self.epochs},\n"
+            f"  device={self.device},\n"
+            f"  dtype={self.dtype},\n"
+            f"  lr={self.lr},\n"
+            f"  eval_interval={self.eval_interval}\n"
+            f"  batch_size={self.batch_size}\n"
+            f")"
+        )
 
 
 class Metrics:
@@ -84,7 +100,7 @@ class Trainer:
 
     def train(self, model: torch.nn.Module):
         self.logger.info(
-            f"Starting training for model_type: {self.training_parameters.model_tyoe}"
+            f"Starting training for model_type: {self.training_parameters.model_type}"
         )
         optimizer = torch.optim.AdamW(
             model.parameters(), lr=self.training_parameters.lr
@@ -138,7 +154,7 @@ class Trainer:
 
         final_perplexity = self._get_final_perplexity(model)
         self.logger.info(
-            f"Final Perplexity for model {self.training_parameters.model_tyoe}: {final_perplexity}"
+            f"Final Perplexity for model {self.training_parameters.model_type}: {final_perplexity}"
         )
         self.metrics.drop_to_csv()
 
@@ -227,7 +243,7 @@ class Trainer:
     def _get_save_path(self) -> str:
         os.makedirs("results", exist_ok=True)
 
-        path = f"results/{self.training_parameters.model_tyoe.value}_metrics.csv"
+        path = f"results/{self.training_parameters.model_type.value}_metrics.csv"
         return path
 
     @staticmethod

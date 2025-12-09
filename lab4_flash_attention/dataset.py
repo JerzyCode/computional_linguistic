@@ -39,7 +39,11 @@ class TokenDataset(Dataset):
 
 
 def load_data(
-    seq_len: int, dtype: torch.dtype, batch_size: int, logger: logging.Logger = logger
+    seq_len: int,
+    dtype: torch.dtype,
+    batch_size: int,
+    tokenizer: AutoTokenizer,
+    logger: logging.Logger = logger,
 ) -> Tuple[DataLoader, DataLoader]:
     logger.info(f"Loading text data from {TRAIN_TEXT_PATH} and {VAL_TEXT_PATH}")
     logger.info(
@@ -51,8 +55,7 @@ def load_data(
     training_text = load_text_data(TRAIN_TEXT_PATH)
     eval_text = load_text_data(VAL_TEXT_PATH)
 
-    logger.info(f"Loading tokenizer: {TOKENIZER}")
-    tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
+    logger.info(f"Using tokenizer: {TOKENIZER}")
 
     logger.info("Tokenizing data")
 

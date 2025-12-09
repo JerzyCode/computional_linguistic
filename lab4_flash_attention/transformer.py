@@ -20,13 +20,29 @@ class ModelType(Enum):
 class ModelArgs:
     vocab_size: int
     device: str = "cuda"
-    model_tyoe: ModelType = ModelType.BASE
+    model_type: ModelType = ModelType.BASE
     seq_len: int = 128
     embedding_dim: int = 512
     blocks_count: int = 4
     num_heads: int = 8
     dropout: float = 0.15
     window_size: Optional[int] = None
+
+    def __str__(self) -> str:
+        return (
+            f"ModelArgs(\n"
+            f"  model_type={self.model_type.value},\n"
+            f"  vocab_size={self.vocab_size:,},\n"
+            f"  seq_len={self.seq_len},\n"
+            f"  embedding_dim={self.embedding_dim},\n"
+            f"  blocks_count={self.blocks_count},\n"
+            f"  num_heads={self.num_heads},\n"
+            f"  head_dim={self.embedding_dim // self.num_heads},\n"
+            f"  dropout={self.dropout},\n"
+            f"  window_size={self.window_size if self.window_size else 'N/A'},\n"
+            f"  device={self.device}\n"
+            f")"
+        )
 
 
 class LanguageModel(nn.Module):
@@ -36,7 +52,7 @@ class LanguageModel(nn.Module):
         transformer_blocks: Sequence[nn.Module],
     ):
         super().__init__()
-        self.tymodel_type = model_args.model_tyoe
+        self.tymodel_type = model_args.model_type
         self.seq_len = model_args.seq_len
         self.device = model_args.device
 
@@ -348,13 +364,13 @@ class ModelFactory:
 
     @staticmethod
     def create_model(model_args: ModelArgs) -> LanguageModel:
-        if model_args.model_tyoe == ModelType.BASE:
+        if model_args.model_type == ModelType.BASE:
             return ModelFactory._create_baseline_model(model_args)
-        elif model_args.model_tyoe == ModelType.BFLOAT16:
+        elif model_args.model_type == ModelType.BFLOAT16:
             return ModelFactory._create_fp16_model(model_args)
-        elif model_args.model_tyoe == ModelType.FLASH_ATTENTION_V2:
+        elif model_args.model_type == ModelType.FLASH_ATTENTION_V2:
             return ModelFactory._create_flash_attention_model(model_args)
-        elif model_args.model_tyoe == ModelType.WINDOWED:
+        elif model_args.model_type == ModelType.WINDOWED:
             return ModelFactory._create_windowed_model(model_args)
         else:
-            raise ValueError(f"Unknown model type: {model_args.model_tyoe}")
+            raise ValueError(f"Unknown model type: {model_args.model_type}")
