@@ -1,13 +1,15 @@
+import json
 import logging
 import os
 import time
 from dataclasses import dataclass
 
+import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import DataLoader
 from torchmetrics.text import Perplexity
 from transformer import ModelType
-from typing_extensions import Optional, Tuple
+from typing_extensions import Dict, Optional, Tuple
 
 
 @dataclass(frozen=True)
@@ -36,9 +38,13 @@ class TrainingParameters:
 
 
 class Metrics:
-    def __init__(self, save_path: str) -> None:
+    def __init__(self, results_dir: str) -> None:
         self.data = {}
-        self.save_path = save_path
+        self.final_training_data = {}
+        self.save_path = results_dir + "/metrics.csv"
+        self.results_dir = results_dir
+
+        os.makedirs(self.results_dir, exist_ok=True)
 
     def add(
         self,
@@ -74,13 +80,119 @@ class Metrics:
 
         self.data[step] = data
 
-    def drop_to_csv(self) -> None:
+    def add_final_training_info(
+        self,
+        training_duration: float,
+        batches_trained: int,
+        batch_size: int,
+        final_perplexity: float,
+        final_eval_loss: float,
+    ) -> None:
+        avgs_gpu_mem = self._calculate_avg_gpu_mem()
+        train_and_eval_avg_durations = self._calculate_eval_and_train_avg_duration()
+
+        self.final_training_data = {
+            "training_duration_minutes": training_duration,
+            "batches_trained": batches_trained,
+            "batch_size": batch_size,
+            "final_perplexity": final_perplexity,
+            "final_eval_loss": final_eval_loss,
+            "avg_before_gpu_mem": avgs_gpu_mem["before_gpu_mem"],
+            "avg_forward_gpu_mem": avgs_gpu_mem["forward_gpu_mem"],
+            "avg_backward_gpu_mem": avgs_gpu_mem["backward_gpu_mem"],
+            "avg_peak_gpu_mem": avgs_gpu_mem["peak_gpu_mem"],
+            "avg_eval_duration_per_batch": train_and_eval_avg_durations[
+                "avg_eval_duration"
+            ],
+            "avg_train_duration_per_batch": train_and_eval_avg_durations[
+                "avg_train_duration"
+            ],
+        }
+
+    def save_metrics(self) -> None:
+        self._drop_to_csv()
+
+        json.dump(
+            self.final_training_data,
+            open(self.results_dir + "/final_training_data.json", "w"),
+        )
+
+        self._save_training_plots()
+
+    def _drop_to_csv(self) -> None:
         import pandas as pd
 
         df = pd.DataFrame.from_dict(self.data, orient="index")
         df.index.name = "step"
         df = df.reset_index()
-        df.to_csv(self.save_path, index=False)
+        df.to_csv(f"{self.results_dir}/metrics.csv", index=False)
+
+    def _save_training_plots(self) -> None:
+        steps_with_eval = [
+            step
+            for step in self.data.keys()
+            if self.data[step]["eval_loss"] is not None
+        ]
+
+        if not steps_with_eval:
+            return
+
+        train_losses = [self.data[step]["train_loss"] for step in steps_with_eval]
+        eval_losses = [self.data[step]["eval_loss"] for step in steps_with_eval]
+
+        plt.figure(figsize=(8, 5))
+        plt.plot(steps_with_eval, train_losses, label="Train Loss", c="g")
+        plt.plot(steps_with_eval, eval_losses, label="Eval Loss", c="r")
+        plt.xlabel("Step")
+        plt.ylabel("Loss")
+        plt.title("Training and Evaluation Loss")
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(f"{self.results_dir}/loss_plot.png")
+        plt.close()
+
+    def _calculate_avg_gpu_mem(self) -> Dict[str, float]:
+        total_steps = len(self.data)
+        sums = {
+            "before_gpu_mem": 0.0,
+            "forward_gpu_mem": 0.0,
+            "backward_gpu_mem": 0.0,
+            "peak_gpu_mem": 0.0,
+        }
+
+        for step_data in self.data.values():
+            sums["before_gpu_mem"] += step_data["before_gpu_mem"]
+            sums["forward_gpu_mem"] += step_data["forward_gpu_mem"]
+            sums["backward_gpu_mem"] += step_data["backward_gpu_mem"]
+            sums["peak_gpu_mem"] += step_data["peak_gpu_mem"]
+
+        avgs = {key: value / total_steps for key, value in sums.items()}
+
+        return avgs
+
+    def _calculate_eval_and_train_avg_duration(self) -> Dict[str, float]:
+        total_eval_duration = 0.0
+        total_train_duration = 0.0
+        eval_steps = 0
+        train_steps = 0
+
+        for step_data in self.data.values():
+            if step_data["eval_duration"] is not None:
+                total_eval_duration += step_data["eval_duration"]
+                eval_steps += 1
+            total_train_duration += step_data["total_duration"]
+            train_steps += 1
+
+        avg_eval_duration = total_eval_duration / eval_steps if eval_steps > 0 else 0.0
+        avg_train_duration = (
+            total_train_duration / train_steps if train_steps > 0 else 0.0
+        )
+
+        return {
+            "avg_eval_duration": avg_eval_duration,
+            "avg_train_duration": avg_train_duration,
+        }
 
 
 class Trainer:
@@ -95,10 +207,10 @@ class Trainer:
         self.train_loader = train_loader
         self.eval_loader = eval_loader
 
-        metrics_path = self._get_save_path()
-        self.metrics = Metrics(save_path=metrics_path)
+        metrics_dir = self._get_save_dir()
+        self.metrics = Metrics(results_dir=metrics_dir)
 
-    def train(self, model: torch.nn.Module):
+    def train(self, model: torch.nn.Module) -> Metrics:
         self.logger.info(
             f"Starting training for model_type: {self.training_parameters.model_type}"
         )
@@ -152,11 +264,21 @@ class Trainer:
             f"Training completed in {round(training_duration / 60, 2)} minutes"
         )
 
+        final_eval_loss, _ = self._perform_evaluation(model)
         final_perplexity = self._get_final_perplexity(model)
         self.logger.info(
             f"Final Perplexity for model {self.training_parameters.model_type}: {final_perplexity}"
         )
-        self.metrics.drop_to_csv()
+
+        self.metrics.add_final_training_info(
+            training_duration=round(training_duration / 60, 2),  # minutes
+            batches_trained=steps_performed,
+            batch_size=self.training_parameters.batch_size,
+            final_perplexity=final_perplexity,
+            final_eval_loss=final_eval_loss,
+        )
+
+        return self.metrics
 
     def _perform_step(self, model, X, y, optimizer):
         torch.cuda.reset_peak_memory_stats()
@@ -240,10 +362,10 @@ class Trainer:
 
         return perplexity.compute().item() / batch_count
 
-    def _get_save_path(self) -> str:
+    def _get_save_dir(self) -> str:
         os.makedirs("results", exist_ok=True)
 
-        path = f"results/{self.training_parameters.model_type.value}_metrics.csv"
+        path = f"results/{self.training_parameters.model_type.value}"
         return path
 
     @staticmethod

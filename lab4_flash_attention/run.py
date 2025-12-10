@@ -2,11 +2,11 @@ import argparse
 import logging
 import os
 
+import torch
+from dataset import load_data
 from training import ModelType, Trainer, TrainingParameters
 from transformer import ModelArgs, ModelFactory
 from transformers import AutoTokenizer
-
-from lab4_flash_attention.dataset import load_data
 
 TOKENIZER = "radlab/polish-gpt2-small-v2"
 
@@ -23,7 +23,7 @@ def create_logger(model_type: ModelType) -> logging.Logger:
     )
     ch.setFormatter(formatter)
 
-    log_path = f"logs/training_{model_type.value}.log"
+    log_path = f"results/{model_type.value}/training.log"
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
 
     file_handler = logging.FileHandler(log_path)
@@ -33,6 +33,32 @@ def create_logger(model_type: ModelType) -> logging.Logger:
         logger.addHandler(ch)
 
     return logger
+
+
+def find_max_batch_size(
+    model, input_shape, start: int = 64, max_search: int = 4096, device="cuda"
+) -> int:
+    batch = start
+    best = start
+
+    while batch <= max_search:
+        try:
+            x = torch.randn((batch, *input_shape)).to(device)
+            out = model(x)
+            loss = out.mean()
+            loss.backward()
+
+            best = batch
+            batch *= 2
+            torch.cuda.empty_cache()
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                torch.cuda.empty_cache()
+                break
+            else:
+                raise e
+
+    return best
 
 
 if __name__ == "__main__":
@@ -96,6 +122,9 @@ if __name__ == "__main__":
         eval_loader=eval_loader,
     )
 
-    trainer.train(model)
+    metrics = trainer.train(model)
 
     logger.info("Run completed.")
+
+    logger.info("Saving metrics")
+    metrics.save_metrics()

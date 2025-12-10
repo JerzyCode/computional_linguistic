@@ -14,4 +14,5 @@ dependencies = [
     "zstandard>=0.22.0",
     "pandas>=2.3.3",
     "torchmetrics>=1.8.2",
+    "matplotlib>=3.10.7",
 ]
