@@ -36,7 +36,12 @@ def create_logger(model_type: ModelType) -> logging.Logger:
 
 
 def find_max_batch_size(
-    model, input_shape, start: int = 64, max_search: int = 4096, device="cuda"
+    model,
+    input_shape,
+    logger: logging.Logger,
+    start: int = 64,
+    max_search: int = 4096,
+    device: torch.device = torch.device("cuda"),
 ) -> int:
     batch = start
     best = start
@@ -51,6 +56,7 @@ def find_max_batch_size(
             best = batch
             batch *= 2
             torch.cuda.empty_cache()
+            logger.info(f"Batch size {best} fits in memory, trying {batch}")
         except RuntimeError as e:
             if "out of memory" in str(e):
                 torch.cuda.empty_cache()
@@ -97,24 +103,35 @@ if __name__ == "__main__":
     device = param.device
     dtype = param.dtype
 
+    logger.info("Calculating maximum batch size")
+    max_batch_size = find_max_batch_size(
+        model=model,
+        input_shape=(model_args.seq_len,),
+        start=16,
+        device=device,
+        logger=logger,
+    )
+    logger.info(f"Maximum batch size determined: {max_batch_size}")
+
     training_params = TrainingParameters(
         model_type=model_type,
         device=device,
         dtype=dtype,
         logger=logger,
-        batch_size=32,
+        batch_size=max_batch_size,
+        seq_len=model_args.seq_len,
     )
+
+    logger.info(f"Training parameters: \n{training_params}")
 
     logger.info("Loading datasets")
     train_loader, eval_loader = load_data(
         seq_len=model_args.seq_len,
         dtype=dtype,
-        batch_size=training_params.batch_size,
+        batch_size=max_batch_size,
         tokenizer=tokenizer,
         logger=logger,
     )
-
-    logger.info(f"Training parameters: \n{training_params}")
 
     trainer = Trainer(
         training_parameters=training_params,

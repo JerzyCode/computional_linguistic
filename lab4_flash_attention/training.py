@@ -22,6 +22,7 @@ class TrainingParameters:
     lr: float = 1e-4
     eval_interval: int = 50
     batch_size: int = 64
+    seq_len: int = 128
 
     def __str__(self) -> str:
         return (
@@ -33,6 +34,7 @@ class TrainingParameters:
             f"  lr={self.lr},\n"
             f"  eval_interval={self.eval_interval}\n"
             f"  batch_size={self.batch_size}\n"
+            f"  seq_len={self.seq_len}\n"
             f")"
         )
 
@@ -41,7 +43,6 @@ class Metrics:
     def __init__(self, results_dir: str) -> None:
         self.data = {}
         self.final_training_data = {}
-        self.save_path = results_dir + "/metrics.csv"
         self.results_dir = results_dir
 
         os.makedirs(self.results_dir, exist_ok=True)
@@ -87,6 +88,8 @@ class Metrics:
         batch_size: int,
         final_perplexity: float,
         final_eval_loss: float,
+        seq_len: int,
+        lr: float,
     ) -> None:
         avgs_gpu_mem = self._calculate_avg_gpu_mem()
         train_and_eval_avg_durations = self._calculate_eval_and_train_avg_duration()
@@ -95,7 +98,9 @@ class Metrics:
             "training_duration_minutes": training_duration,
             "batches_trained": batches_trained,
             "batch_size": batch_size,
-            "final_perplexity": final_perplexity,
+            "seq_len": seq_len,
+            "lr": lr,
+            "lrfinal_perplexity": final_perplexity,
             "final_eval_loss": final_eval_loss,
             "avg_before_gpu_mem": avgs_gpu_mem["before_gpu_mem"],
             "avg_forward_gpu_mem": avgs_gpu_mem["forward_gpu_mem"],
@@ -276,6 +281,8 @@ class Trainer:
             batch_size=self.training_parameters.batch_size,
             final_perplexity=final_perplexity,
             final_eval_loss=final_eval_loss,
+            seq_len=self.training_parameters.seq_len,
+            lr=self.training_parameters.lr,
         )
 
         return self.metrics
