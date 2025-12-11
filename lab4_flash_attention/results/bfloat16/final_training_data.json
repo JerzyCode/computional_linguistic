@@ -1,1 +1,16 @@
-{"avg_epoch_time": 1.44, "steps_performed": 189, "batch_size": 446, "seq_len": 128, "lr": 0.0001, "final_perplexity": 56.452976771763396, "final_eval_loss": 7.362723214285714, "avg_before_gpu_mem": 648439981.38, "avg_forward_gpu_mem": 19152009860.74, "avg_backward_gpu_mem": 6570001556.99, "avg_peak_gpu_mem": 30833187027.3, "avg_eval_duration_eval_loader": 0.07377108724488476, "avg_train_duration_per_batch": 0.12542230144103683, "max_batch_size": 446}
+{
+    "avg_epoch_time": 1.44,
+    "steps_performed": 189,
+    "batch_size": 446,
+    "seq_len": 128,
+    "lr": 0.0001,
+    "final_perplexity": 56.452976771763396,
+    "final_eval_loss": 7.362723214285714,
+    "avg_before_gpu_mem": 648439981.38,
+    "avg_forward_gpu_mem": 19152009860.74,
+    "avg_backward_gpu_mem": 6570001556.99,
+    "avg_peak_gpu_mem": 30833187027.3,
+    "avg_eval_duration_eval_loader": 0.07377108724488476,
+    "avg_train_duration_per_batch": 0.12542230144103683,
+    "max_batch_size": 446
+}

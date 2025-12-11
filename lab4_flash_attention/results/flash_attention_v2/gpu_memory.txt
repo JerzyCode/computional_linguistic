@@ -1,0 +1,5 @@
+
+for 10 steps of evaluation for batch_size of 128:
+
+avg_gpu_memory used: 5314569728.0
+avg_batch_evaluation_time: 0.01713495723131162
