@@ -84,7 +84,7 @@ class Metrics:
 
     def add_final_training_info(
         self,
-        training_duration: float,
+        avg_epoch_time: float,
         steps_performed: int,
         batch_size: int,
         final_perplexity: float,
@@ -97,7 +97,7 @@ class Metrics:
         train_and_eval_avg_durations = self._calculate_eval_and_train_avg_duration()
 
         self.final_training_data = {
-            "training_duration_minutes": training_duration,
+            "avg_epoch_time": avg_epoch_time, 
             "steps_performed": steps_performed,
             "batch_size": batch_size,
             "seq_len": seq_len,
@@ -151,8 +151,6 @@ class Metrics:
         plt.figure(figsize=(8, 5))
         plt.plot(steps_with_eval, train_losses, label="Train Loss", c="g")
         plt.plot(steps_with_eval, eval_losses, label="Eval Loss", c="r")
-        plt.xticks(range(min(steps_with_eval), max(steps_with_eval)+1, self.eval_freq))
-
         plt.xlabel("Step")
         plt.ylabel("Loss")
         plt.title("Training and Evaluation Loss")
@@ -246,7 +244,7 @@ class Trainer:
                 eval_loss, eval_avg_duration_per_batch = None, None
                 if (
                     steps_performed % self.training_parameters.eval_interval == 0
-                    or steps_performed == 1 or steps_performed == len(self.train_loader) -1
+                    or steps_performed == 1 or steps_performed == len(self.train_loader)
                 ):
                     eval_loss, eval_avg_duration_per_batch = self._perform_evaluation(
                         model
@@ -281,7 +279,7 @@ class Trainer:
         )
 
         self.metrics.add_final_training_info(
-            training_duration=round(training_duration / 60, 2),  # minutes
+            avg_epoch_time=round(training_duration / 60, 2),  # minutes
             steps_performed=steps_performed,
             batch_size=self.training_parameters.batch_size,
             final_perplexity=final_perplexity,

@@ -115,10 +115,8 @@ if __name__ == "__main__":
     model_args = ModelArgs(
         model_type=model_type,
         vocab_size=tokenizer.vocab_size,
-        embedding_dim=64,  # FOR TESTING SMALLER
-        num_heads=2,
-        blocks_count=2,
         window_size=8,
+        blocks_count=8
     )
 
     logger.info(f"Creating model with args: \n{model_args}")
@@ -147,7 +145,7 @@ if __name__ == "__main__":
         logger=logger,
         batch_size=max_batch_size,
         seq_len=model_args.seq_len,
-        eval_interval=25,
+        eval_interval=10,
     )
 
     logger.info(f"Training parameters: \n{training_params}")

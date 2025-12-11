@@ -196,7 +196,7 @@ class _MultiHeadFlashAttention(nn.Module):
         self.num_heads = num_heads
         self.head_dim = embedding_dim // num_heads
 
-        self.key = nn.Linear(embedding_dim, self.head_dim, bias=False)
+        self.key = nn.Linear(embedding_dim, embedding_dim, bias=False)
         self.query = nn.Linear(embedding_dim, embedding_dim, bias=False)
         self.value = nn.Linear(embedding_dim, embedding_dim, bias=False)
         self.projection = nn.Linear(embedding_dim, embedding_dim)
@@ -250,9 +250,9 @@ class _MultiHeadWindowedFlashAttention(nn.Module):
         self.num_heads = num_heads
         self.head_dim = embedding_dim // num_heads
 
-        self.key = nn.Linear(embedding_dim, self.head_dim, bias=False)
-        self.query = nn.Linear(embedding_dim, self.head_dim, bias=False)
-        self.value = nn.Linear(embedding_dim, self.head_dim, bias=False)
+        self.key = nn.Linear(embedding_dim, embedding_dim, bias=False)
+        self.query = nn.Linear(embedding_dim, embedding_dim, bias=False)
+        self.value = nn.Linear(embedding_dim, embedding_dim, bias=False)
         self.projection = nn.Linear(embedding_dim, embedding_dim)
 
         self.dropout = dropout
