@@ -34,37 +34,63 @@ def create_logger(model_type: ModelType) -> logging.Logger:
 
     return logger
 
-
 def find_max_batch_size(
     model,
-    input_shape,
+    seq_len: int,
+    vocab_size: int,
+    lr: float,
     logger: logging.Logger,
-    start: int = 64,
-    max_search: int = 4096,
-    device: torch.device = torch.device("cuda"),
+    device: str = "cuda",
+    max_memory_fraction: float = 0.9,
 ) -> int:
-    batch = start
-    best = start
+    best = 1
+    batch_sizes = [16 * i for i in range(1, 200)]  
 
-    while batch <= max_search:
+    for batch in batch_sizes:
+        logger.info(f"Testing batch size: {batch}")
         try:
-            x = torch.randn((batch, *input_shape)).to(device)
-            out = model(x)
-            loss = out.mean()
+            torch.cuda.empty_cache()
+            model.zero_grad(set_to_none=True)
+
+            X = torch.randint(
+                0, vocab_size, (batch, seq_len), device=device, dtype=torch.long
+            )
+            y = X.clone()
+
+            optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+            out, _ = model(X)
+            loss = torch.nn.functional.cross_entropy(
+                out.view(-1, out.size(-1)),
+                y.view(-1)
+            )
             loss.backward()
+            optimizer.step()
+
+            torch.cuda.synchronize()
+
+            free, total = torch.cuda.mem_get_info(device)
+            used_ratio = 1 - free / total
+            if used_ratio > max_memory_fraction:
+                logger.info(f"Exceeded memory fraction: {used_ratio:.2f} > {max_memory_fraction}")
+                break
 
             best = batch
-            batch *= 2
-            torch.cuda.empty_cache()
-            logger.info(f"Batch size {best} fits in memory, trying {batch}")
+
+            del X, y, out, loss, optimizer
+
         except RuntimeError as e:
-            if "out of memory" in str(e):
+            if "out of memory" in str(e).lower():
                 torch.cuda.empty_cache()
+                logger.info(f"Out of memory at batch size: {batch}")
                 break
             else:
                 raise e
 
-    return best
+    safe_batch = int(best * 0.9)  # margni 10%
+    logger.info(f"Maximum safe batch size: {safe_batch}")
+    return max(1, safe_batch)
+
 
 
 if __name__ == "__main__":
@@ -90,7 +116,7 @@ if __name__ == "__main__":
         model_type=model_type,
         vocab_size=tokenizer.vocab_size,
         embedding_dim=64,  # FOR TESTING SMALLER
-        num_heads=3,
+        num_heads=2,
         blocks_count=2,
         window_size=8,
     )
@@ -106,8 +132,9 @@ if __name__ == "__main__":
     logger.info("Calculating maximum batch size")
     max_batch_size = find_max_batch_size(
         model=model,
-        input_shape=(model_args.seq_len,),
-        start=16,
+        lr=1e-4,
+        seq_len=model_args.seq_len,
+        vocab_size=tokenizer.vocab_size,
         device=device,
         logger=logger,
     )
@@ -120,6 +147,7 @@ if __name__ == "__main__":
         logger=logger,
         batch_size=max_batch_size,
         seq_len=model_args.seq_len,
+        eval_interval=25,
     )
 
     logger.info(f"Training parameters: \n{training_params}")
@@ -133,10 +161,14 @@ if __name__ == "__main__":
         logger=logger,
     )
 
+    logger.info("TrainBatches size: {}".format(len(train_loader)))
+    logger.info("EvalBatches size: {}".format(len(eval_loader)))
+
     trainer = Trainer(
         training_parameters=training_params,
         train_loader=train_loader,
         eval_loader=eval_loader,
+        max_batch_size=max_batch_size,
     )
 
     metrics = trainer.train(model)
@@ -145,3 +177,4 @@ if __name__ == "__main__":
 
     logger.info("Saving metrics")
     metrics.save_metrics()
+

@@ -40,10 +40,11 @@ class TrainingParameters:
 
 
 class Metrics:
-    def __init__(self, results_dir: str) -> None:
+    def __init__(self, results_dir: str, eval_freq: int) -> None:
         self.data = {}
         self.final_training_data = {}
         self.results_dir = results_dir
+        self.eval_freq = eval_freq
 
         os.makedirs(self.results_dir, exist_ok=True)
 
@@ -62,8 +63,8 @@ class Metrics:
     ) -> None:
         data = {
             "train_loss": train_loss,
-            "forward_duration": forward_duration,
-            "backward_duration": backward_duration,
+            "forward_duration": forward_duration, # per batch_size * 1
+            "backward_duration": backward_duration, # per batch_size * 1
             "total_duration": forward_duration + backward_duration,
             "before_gpu_mem": before_gpu_mem,
             "forward_gpu_mem": forward_gpu_mem,
@@ -84,34 +85,36 @@ class Metrics:
     def add_final_training_info(
         self,
         training_duration: float,
-        batches_trained: int,
+        steps_performed: int,
         batch_size: int,
         final_perplexity: float,
         final_eval_loss: float,
         seq_len: int,
         lr: float,
+        max_batch_size: int,
     ) -> None:
         avgs_gpu_mem = self._calculate_avg_gpu_mem()
         train_and_eval_avg_durations = self._calculate_eval_and_train_avg_duration()
 
         self.final_training_data = {
             "training_duration_minutes": training_duration,
-            "batches_trained": batches_trained,
+            "steps_performed": steps_performed,
             "batch_size": batch_size,
             "seq_len": seq_len,
             "lr": lr,
-            "lrfinal_perplexity": final_perplexity,
+            "final_perplexity": final_perplexity,
             "final_eval_loss": final_eval_loss,
-            "avg_before_gpu_mem": avgs_gpu_mem["before_gpu_mem"],
-            "avg_forward_gpu_mem": avgs_gpu_mem["forward_gpu_mem"],
-            "avg_backward_gpu_mem": avgs_gpu_mem["backward_gpu_mem"],
-            "avg_peak_gpu_mem": avgs_gpu_mem["peak_gpu_mem"],
-            "avg_eval_duration_per_batch": train_and_eval_avg_durations[
+            "avg_before_gpu_mem": round(avgs_gpu_mem["before_gpu_mem"], 2),
+            "avg_forward_gpu_mem": round(avgs_gpu_mem["forward_gpu_mem"], 2),
+            "avg_backward_gpu_mem": round(avgs_gpu_mem["backward_gpu_mem"], 2),
+            "avg_peak_gpu_mem": round(avgs_gpu_mem["peak_gpu_mem"], 2),
+            "avg_eval_duration_eval_loader": train_and_eval_avg_durations[
                 "avg_eval_duration"
             ],
             "avg_train_duration_per_batch": train_and_eval_avg_durations[
                 "avg_train_duration"
             ],
+            "max_batch_size": max_batch_size,
         }
 
     def save_metrics(self) -> None:
@@ -148,6 +151,8 @@ class Metrics:
         plt.figure(figsize=(8, 5))
         plt.plot(steps_with_eval, train_losses, label="Train Loss", c="g")
         plt.plot(steps_with_eval, eval_losses, label="Eval Loss", c="r")
+        plt.xticks(range(min(steps_with_eval), max(steps_with_eval)+1, self.eval_freq))
+
         plt.xlabel("Step")
         plt.ylabel("Loss")
         plt.title("Training and Evaluation Loss")
@@ -206,14 +211,16 @@ class Trainer:
         training_parameters: TrainingParameters,
         train_loader: DataLoader,
         eval_loader: DataLoader,
+        max_batch_size: int,
     ) -> None:
         self.training_parameters = training_parameters
         self.logger = training_parameters.logger
         self.train_loader = train_loader
         self.eval_loader = eval_loader
+        self.max_batch_size = max_batch_size
 
         metrics_dir = self._get_save_dir()
-        self.metrics = Metrics(results_dir=metrics_dir)
+        self.metrics = Metrics(results_dir=metrics_dir, eval_freq=training_parameters.eval_interval)
 
     def train(self, model: torch.nn.Module) -> Metrics:
         self.logger.info(
@@ -231,17 +238,15 @@ class Trainer:
             for batch in self.train_loader:
                 X, y = batch
                 X = X.to(device=self.training_parameters.device)
-                x = X.to(dtype=self.training_parameters.dtype)
                 y = y.to(device=self.training_parameters.device)
-                y = y.to(dtype=self.training_parameters.dtype)
 
-                step_data = self._perform_step(model, x, y, optimizer)
+                step_data = self._perform_step(model, X, y, optimizer)
                 steps_performed += 1
 
                 eval_loss, eval_avg_duration_per_batch = None, None
                 if (
                     steps_performed % self.training_parameters.eval_interval == 0
-                    or steps_performed == 1
+                    or steps_performed == 1 or steps_performed == len(self.train_loader) -1
                 ):
                     eval_loss, eval_avg_duration_per_batch = self._perform_evaluation(
                         model
@@ -277,12 +282,13 @@ class Trainer:
 
         self.metrics.add_final_training_info(
             training_duration=round(training_duration / 60, 2),  # minutes
-            batches_trained=steps_performed,
+            steps_performed=steps_performed,
             batch_size=self.training_parameters.batch_size,
             final_perplexity=final_perplexity,
             final_eval_loss=final_eval_loss,
             seq_len=self.training_parameters.seq_len,
             lr=self.training_parameters.lr,
+            max_batch_size=self.max_batch_size,
         )
 
         return self.metrics
@@ -335,16 +341,14 @@ class Trainer:
             for batch in self.eval_loader:
                 X, y = batch
                 X = X.to(device=self.training_parameters.device)
-                X = X.to(dtype=self.training_parameters.dtype)
                 y = y.to(device=self.training_parameters.device)
-                y = y.to(dtype=self.training_parameters.dtype)
 
                 _, loss = model(X, y)
                 total_loss += loss.item()
                 num_batches += 1
 
         end_time = time.perf_counter()
-        evaluation_duration = end_time - start_time
+        evaluation_duration = end_time - start_time # per batch_size * len(eval_loader)
         evalution_duration_avg = evaluation_duration / num_batches
 
         avg_loss = total_loss / num_batches
@@ -354,14 +358,12 @@ class Trainer:
         batch_count = 0
         model.eval()
 
-        perplexity = Perplexity()
+        perplexity = Perplexity().to(self.training_parameters.device)
 
         with torch.no_grad():
             for X, y in self.eval_loader:
                 X = X.to(device=self.training_parameters.device)
-                X = X.to(dtype=self.training_parameters.dtype)
                 y = y.to(device=self.training_parameters.device)
-                y = y.to(dtype=self.training_parameters.dtype)
 
                 logits, _ = model(X)
                 perplexity.update(logits, y)

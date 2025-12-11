@@ -60,8 +60,8 @@ def load_data(
     logger.info("Tokenizing data")
 
     sep = tokenizer.sep_token if tokenizer.sep_token else tokenizer.eos_token
-    train_tokens = torch.tensor(tokenizer.encode(training_text + sep), dtype=dtype)
-    eval_tokens = torch.tensor(tokenizer.encode(eval_text + sep), dtype=dtype)
+    train_tokens = torch.tensor(tokenizer.encode(training_text + sep))
+    eval_tokens = torch.tensor(tokenizer.encode(eval_text + sep))
 
     logger.info(f"Created {len(train_tokens)} training tokens")
     logger.info(f"Created {len(eval_tokens)} eval tokens")

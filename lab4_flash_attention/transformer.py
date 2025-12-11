@@ -52,7 +52,7 @@ class LanguageModel(nn.Module):
         transformer_blocks: Sequence[nn.Module],
     ):
         super().__init__()
-        self.tymodel_type = model_args.model_type
+        self.model_type = model_args.model_type
         self.seq_len = model_args.seq_len
         self.device = model_args.device
 
@@ -75,7 +75,8 @@ class LanguageModel(nn.Module):
         )  # ints from  0 ... T-1
 
         x = tok_emb + pos_emb  # (B, T, C)
-        x = self.blocks(x)  # (B, T, C)
+        for block in self.blocks:
+            x = block(x)
         x = self.layer_norm(x)
         logits = self.lm_head(x)  # (B, T, vocab_size)
 
@@ -196,8 +197,8 @@ class _MultiHeadFlashAttention(nn.Module):
         self.head_dim = embedding_dim // num_heads
 
         self.key = nn.Linear(embedding_dim, self.head_dim, bias=False)
-        self.query = nn.Linear(embedding_dim, self.head_dim, bias=False)
-        self.value = nn.Linear(embedding_dim, self.head_dim, bias=False)
+        self.query = nn.Linear(embedding_dim, embedding_dim, bias=False)
+        self.value = nn.Linear(embedding_dim, embedding_dim, bias=False)
         self.projection = nn.Linear(embedding_dim, embedding_dim)
 
         self.dropout = dropout
@@ -374,3 +375,4 @@ class ModelFactory:
             return ModelFactory._create_windowed_model(model_args)
         else:
             raise ValueError(f"Unknown model type: {model_args.model_type}")
+
