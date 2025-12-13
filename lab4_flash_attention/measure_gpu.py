@@ -76,8 +76,6 @@ if __name__ == "__main__":
         max_batch_size=batch_size,
     )
 
-    # metrics = trainer.train(model)
-
     memory_used = 0
     durations = 0
     steps = 10
