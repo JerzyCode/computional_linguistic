@@ -1,0 +1,6 @@
+model:
+  name: codellama/CodeLlama-13b-Instruct-hf
+  dtype: bfloat16          
+  max_new_tokens: 512       
+
+cuda_visible_devices: "0" 
