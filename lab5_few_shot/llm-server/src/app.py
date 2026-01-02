@@ -29,8 +29,8 @@ def create_app(config: Config) -> FastAPI:
 
     app = FastAPI(title="LLM Server", version="1.0.0")
 
-    @app.post("/generate-statements")
-    async def generate_statement(request: InferenceRequest) -> ApiResponse:
+    @app.post("/generate")
+    async def generate(request: InferenceRequest) -> ApiResponse:
         inference_repsonse = inference_port.infer(request)
 
         return inference_repsonse

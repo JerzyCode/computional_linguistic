@@ -1,0 +1,6 @@
+model:
+  name: deepseek-ai/DeepSeek-R1-Distill-Qwen-14B
+  dtype: bfloat16          
+  max_new_tokens: 512       
+
+cuda_visible_devices: "0" 
