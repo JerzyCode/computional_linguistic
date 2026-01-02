@@ -47,7 +47,10 @@ def _load_model(config: Config) -> Tuple[AutoModelForCausalLM, AutoTokenizer]:
 
     tokenizer = AutoTokenizer.from_pretrained(config.model_name)
     model = AutoModelForCausalLM.from_pretrained(
-        config.model_name, dtype=config.torch_dtype, device_map="auto"
+        config.model_name,
+        dtype=config.torch_dtype,
+        device_map="auto",
+        trust_remote_code=True,
     )
     log.info(f"Model {config.model_name} loaded successfully")
     return model, tokenizer  # type: ignore[return-value]

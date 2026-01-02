@@ -1,5 +1,5 @@
 model:
-  name: codellama/CodeLlama-13b-Instruct-hf
+  name: microsoft/Phi-3-mini-4k-instruct
   dtype: bfloat16          
   max_new_tokens: 512       
 
