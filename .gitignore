@@ -27,3 +27,5 @@ hate_model_finetune
 hate_model_scratch
 
 .build
+
+*.log

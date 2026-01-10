@@ -265,9 +265,26 @@ The model is evaluated on a collection of benchmark optimization problems descri
 has not been publicly released at the time of writing.
 
 
+\subsubsection{Tasks 5--10: Remaining Work}
+The remaining tasks will be presented in a concise manner with minimal analysis.
 
+\textbf{Task 5: Prompt Robustness.}
+Evaluate response consistency by asking the same factual question in five different phrasings (e.g., "What is the capital of France?" rephrased five ways). Evaluation: check if all answers are correct and consistent.
 
+\textbf{Task 6: Contradiction Detection.}
+Given statement pairs, classify relationship as contradiction, support, or neutral. Test set includes pairs like "All cats are mammals" / "Some cats are reptiles." Evaluation: classification accuracy and justification quality.
 
+\textbf{Task 7: Analogical Reasoning.}
+Complete analogies in the form "A is to B as C is to ?". Test examples: "Paris is to France as Berlin is to ?", "hot is to cold as up is to ?". Evaluation: correctness of the answer and demonstration of relational understanding.
+
+\textbf{Task 8: Pattern Completion.}
+Identify and continue sequences from 2-3 examples (e.g., 2, 4, 8, 16, \_\_, \_\_). Test with numeric, letter, and word patterns. Evaluation: correctness of next elements.
+
+\textbf{Task 9: Word Disambiguation.}
+Identify correct meaning of polysemous words in context. Test sentences with words like "bank" (financial institution vs. riverbank) and "bat" (animal vs. equipment). Evaluation: correct sense identification.
+
+\textbf{Task 10: Implicit Reasoning.}
+Answer questions requiring implicit world knowledge or common-sense reasoning. Examples: "If I drop a glass cup on a concrete floor, what will likely happen?", "Can you put out a fire with gasoline?". Evaluation: correctness of answer and quality of reasoning explanation.
 
 
 
@@ -591,11 +608,6 @@ Overall, the larger model demonstrated substantially superior performance, as it
 Another notable difference is that the larger model required a significantly higher number of newly generated tokens. This is attributable to the fact that it produced a more extensive and detailed analysis and, even after presenting a final answer, it proceeded to verify the correctness of its own solution.
 
 
-
-
-
-
-
 \subsection{Task 4: Code Generation}
 
 In the context of code generation, as with the mutation of different optimization algorithms, the models were initially able to produce code that appeared syntactically and structurally sound. However, some models only modified constant values without introducing any substantive changes to the underlying logic or algorithmic structure, which was not the intended outcome.
@@ -716,6 +728,47 @@ In conclusion, additional prompt-engineering efforts appear necessary for this t
 \subsection{Tasks 5--10: Remaining Work}
 The remaining tasks (5--10) will be presented in a more concise manner and subjected to a less comprehensive analysis, due to the substantial amount of time that would be required for an in-depth examination.
 
+
+\subsubsection{Task 5: Prompt Robustness}
+For this task, both models demonstrated high accuracy and consistency, correctly answering all five factual questions despite variations in phrasing. This indicates robust factual understanding and invariance to prompt formulation. The primary distinction lies in computational efficiency: Qwen-14B, due to its larger size, incurs higher token usage and computational cost, but does not yield improved performance over the smaller model.
+
+\hfill
+
+\begin{minipage}{0.7\textwidth}
+    \textbf{Example Test Questions}
+    \begin{lstlisting}[language=]
+"What is the capital of Japan?",
+"Could you tell me the capital city of Japan?",
+"Which city is the capital of Japan?",
+"Japan's capital is which city?",
+"Name the city that serves as the capital of Japan.",
+\end{lstlisting}
+\end{minipage}
+\hspace{1cm}
+\begin{minipage}{0.2\textwidth}
+    \textbf{Model Phi Zero Shot Responses }
+    \begin{lstlisting}[language=C]
+A: Tokyo
+A: Tokyo
+A: Tokyo
+A: Tokyo
+A: Tokyo
+\end{lstlisting}
+\end{minipage}
+
+
+There is no observable improvement from using the few-shot prompting strategy for this task. The only effect is increased token usage, as the task appears to be too simple for few-shot examples to provide additional benefit.
+
+
+\subsubsection{Task 6: Contradiction Detection}
+
+\subsubsection{Task 7: Analogical Reasoning}
+
+\subsubsection{Task 8: Pattern Completion}
+
+\subsubsection{Task 9: Word Disambiguation}
+
+\subsubsection{Task 10: Implicit Reasoning}
 
 
 \section{Conclusion}
