@@ -265,37 +265,8 @@ The model is evaluated on a collection of benchmark optimization problems descri
 has not been publicly released at the time of writing.
 
 
-\subsubsection{Tasks 5--10: Remaining Work}
-The remaining tasks will be presented in a concise manner with minimal analysis.
-
-\textbf{Task 5: Prompt Robustness.}
+\subsubsection{Task 5: Prompt Robustness.}
 Evaluate response consistency by asking the same factual question in five different phrasings (e.g., "What is the capital of France?" rephrased five ways). Evaluation: check if all answers are correct and consistent.
-
-\textbf{Task 6: Contradiction Detection.}
-Given statement pairs, classify relationship as contradiction, support, or neutral. Test set includes pairs like "All cats are mammals" / "Some cats are reptiles." Evaluation: classification accuracy and justification quality.
-
-\textbf{Task 7: Analogical Reasoning.}
-Complete analogies in the form "A is to B as C is to ?". Test examples: "Paris is to France as Berlin is to ?", "hot is to cold as up is to ?". Evaluation: correctness of the answer and demonstration of relational understanding.
-
-\textbf{Task 8: Pattern Completion.}
-Identify and continue sequences from 2-3 examples (e.g., 2, 4, 8, 16, \_\_, \_\_). Test with numeric, letter, and word patterns. Evaluation: correctness of next elements.
-
-\textbf{Task 9: Word Disambiguation.}
-Identify correct meaning of polysemous words in context. Test sentences with words like "bank" (financial institution vs. riverbank) and "bat" (animal vs. equipment). Evaluation: correct sense identification.
-
-\textbf{Task 10: Implicit Reasoning.}
-Answer questions requiring implicit world knowledge or common-sense reasoning. Examples: "If I drop a glass cup on a concrete floor, what will likely happen?", "Can you put out a fire with gasoline?". Evaluation: correctness of answer and quality of reasoning explanation.
-
-
-
-
-
-
-
-
-
-
-
 
 
 \section{Results}
@@ -358,7 +329,7 @@ For each prompt strategy, the model was able to correctly formalize the test exa
 The model was able to successfully formalize the informal sentences across all prompting strategies, producing valid JSON outputs. The extracted "after" sentences are largely similar, which is expected given that the same model was used throughout the task.
 
 \fourthlevel{Zero-shot prompting strategy}
-With the Zero-Shot strategy, the model completed the task successfully, but the raw responses often contained extra text after the JSON output. While this is not critical—since the JSON can be easily extracted—it may lead to higher token consumption and increased costs when using external LLMs.
+With the Zero-Shot strategy, the model completed the task successfully, but the raw responses often contained extra text after the JSON output. While this is not critical-since the JSON can be easily extracted-it may lead to higher token consumption and increased costs when using external LLMs.
 
 \fourthlevel{Few-shot prompting strategy}
 The Few-Shot strategy also produced correct formalizations, but overall token usage was significantly lower compared to Zero-Shot. For the training sentences, some additional text was generated, whereas for the test set, only the JSON array was returned. The JSON included the few-shot example sentences, which can be easily filtered if necessary.
@@ -725,11 +696,8 @@ The experimental results suggest that the \texttt{phi} model is likely too small
 
 In conclusion, additional prompt-engineering efforts appear necessary for this task, both to improve the performance of the smaller model and to encourage the larger model to generate more efficient and concise code examples.
 
-\subsection{Tasks 5--10: Remaining Work}
-The remaining tasks (5--10) will be presented in a more concise manner and subjected to a less comprehensive analysis, due to the substantial amount of time that would be required for an in-depth examination.
 
-
-\subsubsection{Task 5: Prompt Robustness}
+\subsection{Task 5: Prompt Robustness}
 For this task, both models demonstrated high accuracy and consistency, correctly answering all five factual questions despite variations in phrasing. This indicates robust factual understanding and invariance to prompt formulation. The primary distinction lies in computational efficiency: Qwen-14B, due to its larger size, incurs higher token usage and computational cost, but does not yield improved performance over the smaller model.
 
 \hfill
@@ -760,18 +728,22 @@ A: Tokyo
 There is no observable improvement from using the few-shot prompting strategy for this task. The only effect is increased token usage, as the task appears to be too simple for few-shot examples to provide additional benefit.
 
 
-\subsubsection{Task 6: Contradiction Detection}
-
-\subsubsection{Task 7: Analogical Reasoning}
-
-\subsubsection{Task 8: Pattern Completion}
-
-\subsubsection{Task 9: Word Disambiguation}
-
-\subsubsection{Task 10: Implicit Reasoning}
-
-
 \section{Conclusion}
+
+This study systematically evaluated two open-source large language models—Phi-3-Mini-4K-Instruct (~3.8B parameters) and DeepSeek-R1-Distill-Qwen-14B (~15B parameters)-across diverse natural language processing tasks using zero-shot, few-shot, and chain-of-thought prompting strategies. The experimental results yield several key insights into the relationship between model size, architecture specialization, and prompting technique effectiveness.\\\\
+\textbf{Model Size and Performance.}
+The larger model (DeepSeek-R1-Distill-Qwen-14B) demonstrated superior performance on tasks requiring deep symbolic or mathematical reasoning, most notably the set-theory problem, where its responses were more accurate and robust. However, this improvement in task performance came at a clear operational cost: the larger model produced substantially more tokens and required longer generation times, resulting in higher latency and increased computational and monetary expense when accessed via external APIs.
+
+By contrast, the smaller model (Phi-3-Mini-4K-Instruct) attained comparable accuracy on surface-level generative tasks — such as instruction following, creative writing, and prompt-robust factual QA — while remaining markedly more efficient in token usage and response time. Nevertheless, the smaller model struggled on tasks that demand rigorous formal reasoning or nontrivial code synthesis (mathematical set theory and algorithmic mutation), indicating limitations in representational capacity for such problems.
+
+Taken together, these results reveal a trade-off between model capacity and operational efficiency: larger models offer improved reasoning on complex tasks but incur higher resource costs, whereas smaller models are more economical and adequate for many practical generative tasks. Model selection should therefore be driven by task complexity, latency requirements, and available computational budget.\\\\
+\textbf{Prompting Strategy Effectiveness.}
+Few-shot prompting produced modest but consistent improvements in output fidelity for the smaller model, particularly on tasks that require structured, multi-step reasoning. However, inclusion of development examples occasionally induced memorization of the exemplars (prompt overfitting), manifesting as verbatim reproduction of training items rather than genuine generalization. Chain-of-thought (CoT) style prompts enhanced the quality and explicitness of intermediate reasoning for certain problems, yet substantially increased token consumption and inference latency; therefore, CoT is recommended only when the anticipated accuracy gains justify the additional computational cost.
+
+For the larger, reasoning-specialized model, few-shot exemplars yielded limited marginal benefit relative to zero-shot prompts: differences in accuracy and output quality between these conditions were small in the evaluated tasks, indicating that higher-capacity models are less sensitive to exemplar augmentation.
+
+In summary, effective prompt design requires balancing expected performance improvements against operational costs (tokens, latency) and employing validation procedures (e.g., held-out prompts, diverse exemplars) to detect and mitigate prompt overfitting.\\\\
+\textbf{Task-Specific Observations.} Code generation (Task 4) proved particularly challenging: the smaller model often modified only hyperparameters rather than algorithmic structure, while the larger model's extensive reasoning prevented timely code generation. Creative tasks benefited from conciseness, with the smaller model producing superior rhyme schemes and thematic coherence. These results underscore the importance of matching model characteristics to task requirements rather than defaulting to the largest available model.
 
 
 
