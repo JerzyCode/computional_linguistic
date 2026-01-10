@@ -1,0 +1,84 @@
+{
+    "algorithm_id": "550e8400-e29b-41d4-a716-446655440000",
+    "algorithm_code": "def update_step(x, g, v, t=1):\n    b1=0.9\n    b2=0.999\n    eps=1e-08\n    lr=0.01\n    wd=0.01\n    one=1.0\n    t1=multiply(b1, t)\n    t2=multiply(b2, t)\n    v1=multiply(t1, v)\n    one_minus_b1=substract(one, t1)\n    g2=square(g)\n    v2=multiply(t2, g2)\n    v_new=add(v1, v2)\n    sqrt_v=safe_sqrt(v_new)\n    denom=add(sqrt_v, eps)\n    update=safe_divide(g, denom)\n    step=multiply(lr, update)\n    decay=multiply(wd, x)\n    total_step=add(step, decay)\n    clip_step=clip(total_step, -1, 1)\n    x_new=substract(x, clip_step)\n    v_new=multiply(one_minus_b1, g)\n    return x_new, v_new",
+    "repetitions": 10,
+    "function_name": "update_step",
+    "seed": 42,
+    "problems": [
+        {
+            "name": "Sphere",
+            "dim": 5,
+            "instance": 1
+        },
+        {
+            "name": "Sphere",
+            "dim": 10,
+            "instance": 5
+        },
+        {
+            "name": "Sphere",
+            "dim": 25,
+            "instance": 10
+        },
+        {
+            "name": "Rastrigin",
+            "dim": 5,
+            "instance": 1
+        },
+        {
+            "name": "Rastrigin",
+            "dim": 10,
+            "instance": 5
+        },
+        {
+            "name": "Rastrigin",
+            "dim": 25,
+            "instance": 10
+        },
+        {
+            "name": "Rosenbrock",
+            "dim": 5,
+            "instance": 1
+        },
+        {
+            "name": "Rosenbrock",
+            "dim": 10,
+            "instance": 5
+        },
+        {
+            "name": "Rosenbrock",
+            "dim": 25,
+            "instance": 10
+        },
+        {
+            "name": "Ackley",
+            "dim": 5,
+            "instance": 1
+        },
+        {
+            "name": "Ackley",
+            "dim": 10,
+            "instance": 5
+        },
+        {
+            "name": "Ackley",
+            "dim": 25,
+            "instance": 10
+        },
+        {
+            "name": "Griewank",
+            "dim": 5,
+            "instance": 1
+        },
+        {
+            "name": "Griewank",
+            "dim": 10,
+            "instance": 5
+        },
+        {
+            "name": "Griewank",
+            "dim": 25,
+            "instance": 10
+        }
+    ]
+}
