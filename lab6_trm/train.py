@@ -61,7 +61,6 @@ def train_epoch(
     optimizer,
     device,
     max_steps=16,
-    use_act=True,
     use_wandb=False,
     global_step=0,
     test_loader=None,
@@ -97,17 +96,16 @@ def train_epoch(
                 logits[active_mask].view(-1, 10), solution[active_mask].view(-1)
             )
 
-            if use_act:
-                correct_mask = (logits.argmax(dim=-1) == solution).all(dim=1).float()
-                act_loss = F.binary_cross_entropy_with_logits(
-                    q_halt[active_mask], correct_mask[active_mask]
-                )
-                loss = loss + act_loss
+            correct_mask = (logits.argmax(dim=-1) == solution).all(dim=1).float()
+            act_loss = F.binary_cross_entropy_with_logits(
+                q_halt[active_mask], correct_mask[active_mask]
+            )
+            loss = loss + act_loss
 
-            optimizer.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
+            optimizer.zero_grad()
 
             if ema_model is not None:
                 update_ema(model, ema_model)
@@ -119,14 +117,13 @@ def train_epoch(
             total_steps += 1
             total_supervision_steps += 1
 
-            global_step += 1
+            newly_halted = (q_halt > 0) & ~halted
+            halted = halted | newly_halted
 
-            if use_act:
-                newly_halted = (q_halt > 0) & ~halted
-                halted = halted | newly_halted
+            if halted.all():
+                break
 
-                if halted.all():
-                    break
+        global_step += 1
 
         progress.set_postfix(
             {
@@ -291,9 +288,6 @@ def main():
         "--save-every", type=int, default=1000, help="Save checkpoint every N steps"
     )
     parser.add_argument("--save-path", type=Path, default=Path("checkpoints"))
-    parser.add_argument(
-        "--no-act", action="store_true", help="Disable ACT early stopping"
-    )
 
     parser.add_argument(
         "--eval-samples", type=int, default=1000, help="Number of test samples for eval"
@@ -390,7 +384,6 @@ def main():
             optimizer,
             args.device,
             max_steps=args.max_steps,
-            use_act=not args.no_act,
             use_wandb=args.wandb,
             global_step=global_step,
             test_loader=test_loader,
