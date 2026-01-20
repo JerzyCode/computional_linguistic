@@ -64,6 +64,11 @@ def train_epoch(
     use_act=True,
     use_wandb=False,
     global_step=0,
+    test_loader=None,
+    eval_every=500,
+    save_every=1000,
+    save_path=None,
+    best_puzzle_acc=0.0,
 ):
     model.train()
     total_loss = 0
@@ -146,6 +151,50 @@ def train_epoch(
                 step=global_step,
             )
 
+        if test_loader is not None and global_step % eval_every == 0:
+            model.eval()
+            eval_metrics = evaluate(ema_model, test_loader, device, max_steps=max_steps)
+            print(
+                f"\n[Step {global_step}] Eval - Cell: {eval_metrics['cell_acc']:.4f}, "
+                f"Puzzle: {eval_metrics['puzzle_acc']:.4f}"
+            )
+            if use_wandb:
+                wandb.log(
+                    {
+                        "eval/cell_acc": eval_metrics["cell_acc"],
+                        "eval/puzzle_acc": eval_metrics["puzzle_acc"],
+                    },
+                    step=global_step,
+                )
+            if eval_metrics["puzzle_acc"] > best_puzzle_acc:
+                best_puzzle_acc = eval_metrics["puzzle_acc"]
+                if save_path is not None:
+                    torch.save(
+                        {
+                            "global_step": global_step,
+                            "model_state_dict": model.state_dict(),
+                            "ema_model_state_dict": ema_model.state_dict(),
+                            "optimizer_state_dict": optimizer.state_dict(),
+                            "best_puzzle_acc": best_puzzle_acc,
+                        },
+                        save_path / "best_model.pt",
+                    )
+                    print(f"New best model saved! Puzzle Acc: {best_puzzle_acc:.4f}")
+            model.train()
+
+        if save_path is not None and global_step % save_every == 0:
+            torch.save(
+                {
+                    "global_step": global_step,
+                    "model_state_dict": model.state_dict(),
+                    "ema_model_state_dict": ema_model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "best_puzzle_acc": best_puzzle_acc,
+                },
+                save_path / f"checkpoint_step_{global_step}.pt",
+            )
+            print(f"\n[Step {global_step}] Checkpoint saved")
+
     avg_sup_steps = total_supervision_steps / len(dataloader)
     return {
         "loss": total_loss / total_steps if total_steps > 0 else 0,
@@ -153,6 +202,7 @@ def train_epoch(
         "puzzle_acc": total_puzzle_acc / total_steps if total_steps > 0 else 0,
         "avg_sup_steps": avg_sup_steps,
         "global_step": global_step,
+        "best_puzzle_acc": best_puzzle_acc,
     }
 
 
@@ -234,7 +284,12 @@ def main():
     parser.add_argument(
         "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
     )
-    parser.add_argument("--eval-every", type=int, default=1)
+    parser.add_argument(
+        "--eval-every", type=int, default=500, help="Evaluate every N steps"
+    )
+    parser.add_argument(
+        "--save-every", type=int, default=1000, help="Save checkpoint every N steps"
+    )
     parser.add_argument("--save-path", type=Path, default=Path("checkpoints"))
     parser.add_argument(
         "--no-act", action="store_true", help="Disable ACT early stopping"
@@ -246,6 +301,7 @@ def main():
     parser.add_argument("--wandb", action="store_true", help="Enable W&B logging")
     parser.add_argument("--wandb-project", type=str, default="trm-sudoku")
     parser.add_argument("--wandb-run-name", type=str, default=None)
+    parser.add_argument("--num-workers", type=int, default=4)
     args = parser.parse_args()
 
     args.save_path.mkdir(parents=True, exist_ok=True)
@@ -264,14 +320,14 @@ def main():
         train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=4,
+        num_workers=args.num_workers,
         pin_memory=True,
     )
     test_loader = DataLoader(
         test_dataset,
         batch_size=args.batch_size,
         shuffle=False,
-        num_workers=4,
+        num_workers=args.num_workers,
         pin_memory=True,
     )
 
@@ -337,8 +393,14 @@ def main():
             use_act=not args.no_act,
             use_wandb=args.wandb,
             global_step=global_step,
+            test_loader=test_loader,
+            eval_every=args.eval_every,
+            save_every=args.save_every,
+            save_path=args.save_path,
+            best_puzzle_acc=best_puzzle_acc,
         )
         global_step = train_metrics["global_step"]
+        best_puzzle_acc = train_metrics["best_puzzle_acc"]
 
         print(
             f"\nTrain - Loss: {train_metrics['loss']:.4f}, "
@@ -351,52 +413,11 @@ def main():
             wandb.log(
                 {
                     "epoch": epoch,
-                    "train/loss": train_metrics["loss"],
-                    "train/cell_acc": train_metrics["cell_acc"],
-                    "train/puzzle_acc": train_metrics["puzzle_acc"],
-                    "train/avg_sup_steps": train_metrics["avg_sup_steps"],
+                    "epoch/train_loss": train_metrics["loss"],
+                    "epoch/train_cell_acc": train_metrics["cell_acc"],
+                    "epoch/train_puzzle_acc": train_metrics["puzzle_acc"],
+                    "epoch/avg_sup_steps": train_metrics["avg_sup_steps"],
                 }
-            )
-
-        if epoch % args.eval_every == 0:
-            eval_metrics = evaluate(
-                ema_model, test_loader, args.device, max_steps=args.max_steps
-            )
-            print(
-                f"Eval - Cell Acc: {eval_metrics['cell_acc']:.4f}, "
-                f"Puzzle Acc: {eval_metrics['puzzle_acc']:.4f}"
-            )
-
-            if args.wandb:
-                wandb.log(
-                    {
-                        "epoch": epoch,
-                        "eval/cell_acc": eval_metrics["cell_acc"],
-                        "eval/puzzle_acc": eval_metrics["puzzle_acc"],
-                    }
-                )
-
-            if eval_metrics["puzzle_acc"] > best_puzzle_acc:
-                best_puzzle_acc = eval_metrics["puzzle_acc"]
-                torch.save(
-                    {
-                        "epoch": epoch,
-                        "model_state_dict": model.state_dict(),
-                        "ema_model_state_dict": ema_model.state_dict(),
-                        "optimizer_state_dict": optimizer.state_dict(),
-                        "best_puzzle_acc": best_puzzle_acc,
-                        "args": vars(args),
-                    },
-                    args.save_path / "best_model.pt",
-                )
-                print(f"New best model saved! Puzzle Acc: {best_puzzle_acc:.4f}")
-
-            puzzle, solution = next(iter(test_loader))
-            puzzle = puzzle[:1].to(args.device)
-            solution = solution[:1].to(args.device)
-            prediction = ema_model.solve(puzzle, max_steps=args.max_steps)
-            visualize_prediction(
-                puzzle[0].cpu(), solution[0].cpu(), prediction[0].cpu()
             )
 
     print(f"\nTraining complete! Best puzzle accuracy: {best_puzzle_acc:.4f}")
