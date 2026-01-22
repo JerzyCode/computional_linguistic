@@ -91,7 +91,9 @@ medium_sudoku = (
 medium_sudoku_solution = (
     "421683597763459281598127436649718352815342679372965148934271865156894723287536914"
 )
-medium_gemini_solution = ""
+medium_gemini_solution = (
+    "423687591765349821198521736589716342613492575742953168934275681351864927287931415"
+)
 
 medium_sample = {
     "puzzle_tensor": parse_sudoku_string(medium_sudoku),
