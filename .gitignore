@@ -29,3 +29,6 @@ hate_model_scratch
 .build
 
 *.log
+
+data
+model

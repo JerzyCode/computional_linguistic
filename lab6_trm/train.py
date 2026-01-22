@@ -415,6 +415,19 @@ def main():
 
     print(f"\nTraining complete! Best puzzle accuracy: {best_puzzle_acc:.4f}")
 
+    final_path = args.save_path / "final_model.pt"
+    torch.save(
+        {
+            "model": model.state_dict(),
+            "ema_model": ema_model.state_dict() if ema_model else None,
+            "optimizer": optimizer.state_dict(),
+            "global_step": global_step,
+            "best_puzzle_acc": best_puzzle_acc,
+        },
+        final_path,
+    )
+    print(f"Final model saved to {final_path}")
+
     if args.wandb:
         wandb.finish()
 
